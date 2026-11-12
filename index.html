@@ -169,7 +169,7 @@
 
 <script>
 /* ===== Config: paste your Warcraft Logs client ID here ===== */
-const CONFIG = { clientId: "PASTE_YOUR_CLIENT_ID_HERE" };
+const CONFIG = { clientId: "01a1cfaa-27d6-7230-b2fe-7dcbfc2f3f33" };
 
 const WCL = "https://www.warcraftlogs.com";
 const REDIRECT = location.origin + location.pathname;
@@ -184,7 +184,7 @@ function load(k, d) { try { const v = localStorage.getItem(K(k)); return v ? JSO
 function save(k, v) { try { localStorage.setItem(K(k), JSON.stringify(v)); } catch (e) { console.warn("save failed", k, e); } }
 
 let token = load("token", null);
-let settings = load("settings", { name: "", realm: "", region: "US" });
+let settings = load("settings", { name: "Decidedly Uncouth", realm: "malganis", region: "US" });
 let data = load("data", null);        // { guildKey, guild, zones:{id:{name,boss,exp}}, reports:{code:status}, kills:[{z,t,c:[]}], chars:{key:{cls}} }
 let links = load("links", {});        // charKey -> mainKey
 let excluded = new Set(load("excluded", []));  // player (main) keys
