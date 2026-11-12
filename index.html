@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guild Roster History</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#101317;--surface:#181C22;--border:#2A3038;--row:#232830;--text:#E8EAED;--muted:#9AA3AE;--soft:#C9CED6;--gold:#E3B04B;--gold-hi:#F2C96F;--blue:#7DB6F5;--orange:#F59A61;--dash:#3A414B}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;font-size:14px;line-height:1.45}
+  a{color:var(--gold)}a:hover{color:var(--gold-hi)}
+  .wrap{max-width:1200px;margin:0 auto;padding:40px 20px 80px;display:flex;flex-direction:column;gap:32px}
+  h1,h2{font-family:'Space Grotesk',sans-serif;margin:0}
+  h1{font-size:clamp(28px,5vw,44px)}h2{font-size:24px}h3{margin:0;font-size:18px}
+  p{margin:0}
+  .eyebrow{color:var(--gold);font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+  .muted{color:var(--muted)}.small{font-size:13px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px}
+  .stack{display:flex;flex-direction:column;gap:12px}
+  .row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+  .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+  .grid2{display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(360px,1fr))}
+  label.f{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+  input[type=text],input[type=search],select,textarea{background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font:inherit;min-height:44px}
+  textarea{min-height:90px;width:100%;resize:vertical}
+  input[type=checkbox]{width:18px;height:18px;accent-color:var(--gold)}
+  button{font:inherit;font-weight:600;border-radius:8px;padding:0 18px;min-height:44px;cursor:pointer;border:1px solid var(--gold);background:var(--gold);color:var(--bg)}
+  button.ghost{background:transparent;color:var(--gold)}
+  button.warn{background:transparent;color:var(--orange);border-color:var(--orange)}
+  button.link{background:none;border:0;color:var(--gold);padding:0 4px;min-height:0;font-weight:500;text-decoration:underline}
+  button:disabled{opacity:.5;cursor:default}
+  .stat{font-family:'Space Grotesk',sans-serif;font-size:34px;font-weight:700;margin-top:6px}
+  table{border-collapse:collapse;width:100%}
+  th{text-align:left;font-weight:500;color:var(--muted);font-size:13px;padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+  td{padding:10px 12px;border-bottom:1px solid var(--row)}
+  .scroll{overflow-x:auto}
+  .bar{height:10px;background:var(--row);border-radius:5px;position:relative;min-width:160px}
+  .bar>span{position:absolute;top:0;height:10px;background:var(--gold);border-radius:5px}
+  .badge{display:inline-block;font-size:12px;border:1px solid currentColor;border-radius:4px;padding:0 6px;margin-left:6px}
+  .b-one{color:var(--orange)}.b-alt{color:var(--blue)}.b-ex{color:var(--muted)}
+  .char{display:flex;align-items:center;gap:12px;min-height:44px;border-bottom:1px solid var(--row);cursor:pointer}
+  .char .nm{flex:1;min-width:0;overflow-wrap:anywhere}
+  .list{max-height:520px;overflow-y:auto;padding-right:4px}
+  .group{border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+  .joined{color:var(--blue);font-weight:600;font-size:13px}.left{color:var(--orange);font-weight:600;font-size:13px}
+  .names{color:var(--soft)}
+  .tl{display:grid;gap:4px;font-size:13px;align-items:center}
+  .tl .h{color:var(--muted);font-size:12px;writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;justify-self:center;max-height:150px;overflow:hidden;text-overflow:ellipsis}
+  .tl .on{height:20px;background:var(--gold);border-radius:4px}
+  .tl .off{height:20px;border:1px dashed var(--dash);border-radius:4px}
+  .tl .pn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;position:sticky;left:0;background:var(--surface);padding-right:8px}
+  .progress{height:10px;background:var(--row);border-radius:5px;overflow:hidden}.progress>span{display:block;height:100%;background:var(--gold);width:0}
+  .err{color:var(--orange)}
+  .hidden{display:none!important}
+  .sr{position:absolute;left:-9999px}
+  code{color:var(--soft)}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="stack" style="gap:8px">
+    <p class="eyebrow">Warcraft Logs · Retail · Mythic · Final boss of each tier</p>
+    <h1 id="title">Guild Roster History</h1>
+    <p class="muted" id="subtitle">Who raided with your guild, tier over tier.</p>
+  </header>
+
+  <!-- SETUP -->
+  <section id="v-setup" class="card stack">
+    <h2>Setup</h2>
+    <p class="muted" id="cfg-warn"></p>
+    <div class="row">
+      <label class="f">Guild name<input type="text" id="g-name" placeholder="e.g. My Guild"></label>
+      <label class="f">Realm slug<input type="text" id="g-realm" placeholder="e.g. area-52"></label>
+      <label class="f">Region<select id="g-region"><option>US</option><option>EU</option><option>KR</option><option>TW</option><option>CN</option></select></label>
+    </div>
+    <div class="row">
+      <button id="btn-signin">Sign in with Warcraft Logs</button>
+      <button id="btn-fetch" class="hidden">Fetch guild logs</button>
+      <button id="btn-signout" class="ghost hidden">Sign out</button>
+      <button id="btn-skip" class="ghost hidden">Use saved data</button>
+    </div>
+    <p class="small muted">Your sign-in and all data stay in this browser. Logs older than 2 years are archived by Warcraft Logs and only load with a Gold/Platinum subscription.</p>
+    <div id="fetch-status" class="stack hidden">
+      <div class="progress"><span id="prog"></span></div>
+      <p class="small" id="prog-text"></p>
+    </div>
+    <p id="setup-err" class="err small"></p>
+  </section>
+
+  <!-- STEP 1 -->
+  <section id="v-link" class="stack hidden">
+    <div class="stack" style="gap:6px">
+      <p class="eyebrow">Step 1 of 2</p>
+      <h2>Link alts and exclude players</h2>
+      <p class="muted">Every character on a Mythic final-boss kill is listed. Check characters, then link them as alts of a main, or exclude them. Unlinked characters count as their own player.</p>
+    </div>
+    <div class="grid2">
+      <div class="card stack">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <h3 id="chars-h">Characters</h3>
+          <label class="small muted" style="display:flex;gap:8px;align-items:center;min-height:44px"><input type="checkbox" id="only-one"> 1-kill only</label>
+        </div>
+        <label class="sr" for="q">Search characters</label>
+        <input type="search" id="q" placeholder="Search characters">
+        <div id="chars" class="list"></div>
+        <div class="row">
+          <label class="f" style="flex:1;min-width:200px">Main for checked characters
+            <input type="text" id="main-pick" list="main-list" placeholder="Type a character name"></label>
+          <datalist id="main-list"></datalist>
+          <button id="btn-link">Link as alts</button>
+        </div>
+        <div class="row">
+          <button id="btn-exclude" class="warn">Exclude checked</button>
+          <button id="btn-unlink" class="ghost">Unlink checked</button>
+          <button id="btn-clear" class="ghost">Clear checks</button>
+        </div>
+      </div>
+      <div class="card stack">
+        <h3 id="players-h">Linked players</h3>
+        <div id="groups" class="stack list" style="max-height:340px"></div>
+        <div class="group stack" style="border-style:dashed;gap:6px">
+          <p class="left" id="ex-h">Excluded</p>
+          <div id="excluded" class="small muted"></div>
+        </div>
+        <label class="f">Or paste links, one player per line: <code>Main-Realm: Alt1-Realm, Alt2-Realm</code>
+          <textarea id="paste"></textarea></label>
+        <div class="row">
+          <button id="btn-paste" class="ghost">Apply pasted links</button>
+          <button id="btn-build">Build report →</button>
+        </div>
+        <p id="paste-msg" class="small muted"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- REPORT -->
+  <section id="v-report" class="stack hidden" style="gap:40px">
+    <div class="card row" style="align-items:center">
+      <p><strong id="ex-count">0 players excluded</strong> <span class="muted">· e.g. one-kill carries or pugs</span></p>
+      <button class="link" id="btn-back">Edit in Step 1</button>
+      <button class="link" id="btn-refetch">Refresh logs</button>
+      <p class="small muted" id="skipped" style="margin-left:auto"></p>
+    </div>
+    <div class="grid" id="summary"></div>
+    <div class="stack">
+      <h2>Longest-serving raiders</h2>
+      <div class="card scroll" style="padding:0"><table>
+        <thead><tr><th>#</th><th>Player (alts)</th><th>First final-boss kill</th><th>Most recent</th><th>Tiers</th><th>Final-boss kills</th><th>Span</th></tr></thead>
+        <tbody id="leader"></tbody></table></div>
+      <p class="small muted">Sorted by tiers with a Mythic final-boss kill in the guild, then total kills. One kill in a tier is enough to count it. <button class="link" id="btn-more">Show all</button></p>
+    </div>
+    <div class="stack">
+      <h2>Roster changes tier over tier</h2>
+      <p class="muted">Each tier is a Warcraft Logs raid zone. Roster = everyone on any Mythic kill of its final boss, compared with the tier before. Newest first.</p>
+      <div class="grid" id="tiers"></div>
+    </div>
+    <div class="stack">
+      <h2>Roster timeline</h2>
+      <div class="card scroll"><div id="timeline" class="tl"></div>
+        <div class="row small muted" style="margin-top:16px;gap:20px;align-items:center">
+          <span style="display:flex;gap:8px;align-items:center"><span style="width:16px;height:12px;background:var(--gold);border-radius:3px"></span>Got a Mythic final-boss kill</span>
+          <span style="display:flex;gap:8px;align-items:center"><span style="width:16px;height:12px;border:1px dashed var(--dash);border-radius:3px"></span>Not present</span>
+        </div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ===== Config: paste your Warcraft Logs client ID here ===== */
+const CONFIG = { clientId: "PASTE_YOUR_CLIENT_ID_HERE" };
+
+const WCL = "https://www.warcraftlogs.com";
+const REDIRECT = location.origin + location.pathname;
+const MYTHIC = 5;
+const DEDUP_MS = 10 * 60 * 1000;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- storage ---------- */
+const K = k => "grh." + k;
+function load(k, d) { try { const v = localStorage.getItem(K(k)); return v ? JSON.parse(v) : d; } catch { return d; } }
+function save(k, v) { try { localStorage.setItem(K(k), JSON.stringify(v)); } catch (e) { console.warn("save failed", k, e); } }
+
+let token = load("token", null);
+let settings = load("settings", { name: "", realm: "", region: "US" });
+let data = load("data", null);        // { guildKey, guild, zones:{id:{name,boss,exp}}, reports:{code:status}, kills:[{z,t,c:[]}], chars:{key:{cls}} }
+let links = load("links", {});        // charKey -> mainKey
+let excluded = new Set(load("excluded", []));  // player (main) keys
+let checked = new Set();
+let showAll = false;
+
+/* ---------- auth (PKCE, no secret) ---------- */
+function b64url(buf) { return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+async function signIn() {
+  const verifier = b64url(crypto.getRandomValues(new Uint8Array(32)));
+  const challenge = b64url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)));
+  const state = b64url(crypto.getRandomValues(new Uint8Array(16)));
+  sessionStorage.setItem("grh.pkce", JSON.stringify({ verifier, state }));
+  saveSettings();
+  location.href = WCL + "/oauth/authorize?" + new URLSearchParams({
+    client_id: CONFIG.clientId, code_challenge: challenge, code_challenge_method: "S256",
+    state, redirect_uri: REDIRECT, response_type: "code" });
+}
+async function handleRedirect() {
+  const p = new URLSearchParams(location.search);
+  if (!p.has("code") && !p.has("error")) return;
+  history.replaceState(null, "", REDIRECT);
+  if (p.has("error")) throw new Error("Sign-in was cancelled or failed: " + p.get("error"));
+  const saved = JSON.parse(sessionStorage.getItem("grh.pkce") || "null");
+  sessionStorage.removeItem("grh.pkce");
+  if (!saved || saved.state !== p.get("state")) throw new Error("Sign-in check failed. Please try again.");
+  const r = await fetch(WCL + "/oauth/token", { method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ grant_type: "authorization_code", client_id: CONFIG.clientId,
+      code_verifier: saved.verifier, redirect_uri: REDIRECT, code: p.get("code") }) });
+  if (!r.ok) throw new Error("Token request failed (" + r.status + ").");
+  const j = await r.json();
+  token = { access: j.access_token, expires: Date.now() + (j.expires_in || 0) * 1000 };
+  save("token", token);
+}
+function signedIn() { return token && token.access && (!token.expires || token.expires > Date.now() + 60000); }
+function signOut() { token = null; localStorage.removeItem(K("token")); renderSetup(); }
+
+/* ---------- GraphQL ---------- */
+async function gql(query, variables = {}) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const r = await fetch(WCL + "/api/v2/user", { method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token.access },
+      body: JSON.stringify({ query, variables }) });
+    if (r.status === 401) { signOut(); throw new Error("Your Warcraft Logs session expired. Sign in again."); }
+    if (r.status === 429) throw new Error("Warcraft Logs API rate limit reached. Progress is saved; wait an hour and press Fetch again.");
+    if (r.status >= 500) { await new Promise(res => setTimeout(res, 2000 * (attempt + 1))); continue; }
+    return r.json();
+  }
+  throw new Error("Warcraft Logs isn't responding. Progress is saved; try again later.");
+}
+
+/* ---------- fetching ---------- */
+function setProgress(frac, text) { $("fetch-status").classList.remove("hidden"); $("prog").style.width = Math.round(frac * 100) + "%"; $("prog-text").textContent = text; }
+
+async function fetchAll() {
+  $("setup-err").textContent = "";
+  saveSettings();
+  const { name, realm, region } = settings;
+  if (!name || !realm) { $("setup-err").textContent = "Enter your guild name and realm slug."; return; }
+  const guildKey = (name + "|" + realm + "|" + region).toLowerCase();
+  if (!data || data.guildKey !== guildKey) data = { guildKey, guild: null, zones: {}, reports: {}, kills: [], chars: {} };
+  $("btn-fetch").disabled = true;
+  try {
+    setProgress(0.02, "Loading raid tiers…");
+    const w = await gql(`{ worldData { expansions { name zones { id name encounters { id name } difficulties { id } } } } }`);
+    if (w.errors && !w.data) throw new Error(w.errors[0].message);
+    const zones = {};
+    for (const ex of w.data.worldData.expansions || []) for (const z of ex.zones || []) {
+      const diffs = (z.difficulties || []).map(d => d.id);
+      if (!diffs.includes(MYTHIC) || !z.encounters || !z.encounters.length) continue;
+      const last = z.encounters[z.encounters.length - 1];
+      zones[z.id] = { name: z.name, boss: last.name, enc: last.id, exp: ex.name };
+    }
+    data.zones = zones;
+
+    setProgress(0.05, "Finding guild…");
+    const g = await gql(`query($n:String!,$s:String!,$r:String!){ guildData { guild(name:$n, serverSlug:$s, serverRegion:$r){ id name server { name } } } }`,
+      { n: name, s: realm, r: region });
+    const guild = g.data && g.data.guildData && g.data.guildData.guild;
+    if (!guild) throw new Error("Guild not found. Check the name, realm slug (e.g. area-52) and region.");
+    data.guild = { id: guild.id, name: guild.name, server: guild.server ? guild.server.name : realm };
+
+    let page = 1, more = true, list = [];
+    while (more) {
+      setProgress(0.08, `Listing guild reports (page ${page})…`);
+      const rr = await gql(`query($g:Int!,$p:Int!){ reportData { reports(guildID:$g, limit:100, page:$p){ has_more_pages data { code startTime zone { id } } } } }`, { g: guild.id, p: page });
+      const rep = rr.data && rr.data.reportData && rr.data.reportData.reports;
+      if (!rep) throw new Error(rr.errors ? rr.errors[0].message : "Couldn't list reports.");
+      list.push(...rep.data); more = rep.has_more_pages; page++;
+    }
+    const todo = list.filter(r => r.zone && zones[r.zone.id] && !data.reports[r.code] && /^[A-Za-z0-9]+$/.test(r.code));
+    const BATCH = 8;
+    for (let i = 0; i < todo.length; i += BATCH) {
+      const batch = todo.slice(i, i + BATCH);
+      setProgress(0.1 + 0.9 * (i / Math.max(todo.length, 1)), `Reading raid logs ${i + 1}–${Math.min(i + BATCH, todo.length)} of ${todo.length}…`);
+      const q = "{ reportData {" + batch.map((r, n) =>
+        ` r${n}: report(code:"${r.code}"){ startTime fights(killType: Kills, difficulty: ${MYTHIC}, encounterID: ${zones[r.zone.id].enc}){ startTime friendlyPlayers } masterData { actors(type:"Player"){ id name server subType } } }`).join("") + " } }";
+      const res = await gql(q);
+      const rd = (res.data && res.data.reportData) || {};
+      batch.forEach((r, n) => {
+        const rep = rd["r" + n];
+        if (!rep) { data.reports[r.code] = "skipped"; return; }
+        const actors = {};
+        for (const a of (rep.masterData && rep.masterData.actors) || []) actors[a.id] = a;
+        for (const f of rep.fights || []) {
+          const c = [];
+          for (const id of f.friendlyPlayers || []) {
+            const a = actors[id]; if (!a) continue;
+            const key = a.name + "-" + (a.server || "?");
+            if (!data.chars[key]) data.chars[key] = { cls: a.subType || "" };
+            c.push(key);
+          }
+          if (c.length) data.kills.push({ z: r.zone.id, t: rep.startTime + f.startTime, c });
+        }
+        data.reports[r.code] = "ok";
+      });
+      save("data", data);
+    }
+    save("data", data);
+    setProgress(1, `Done. ${Object.keys(data.reports).length} raid logs read.`);
+    showLink();
+  } catch (e) {
+    $("setup-err").textContent = e.message;
+    if (data) save("data", data);
+  } finally { $("btn-fetch").disabled = false; }
+}
+
+/* ---------- model ---------- */
+const mainOf = ch => links[ch] || ch;
+function dedupKills() {
+  const ks = [...data.kills].sort((a, b) => a.t - b.t), out = [], lastByZone = {};
+  for (const k of ks) {
+    const prev = lastByZone[k.z];
+    if (prev && k.t - prev.t < DEDUP_MS) { k.c.forEach(c => prev.cs.add(c)); continue; }
+    const nk = { z: k.z, t: k.t, cs: new Set(k.c) }; out.push(nk); lastByZone[k.z] = nk;
+  }
+  return out;
+}
+function charStats(kills) {
+  const s = {};
+  for (const k of kills) for (const c of k.cs) { const x = s[c] || (s[c] = { kills: 0, zones: new Set() }); x.kills++; x.zones.add(k.z); }
+  return s;
+}
+function buildModel() {
+  const kills = dedupKills();
+  const first = {};
+  for (const k of kills) if (!(k.z in first)) first[k.z] = k.t;
+  const tiers = Object.keys(first).map(Number).sort((a, b) => first[a] - first[b]);
+  const tIdx = Object.fromEntries(tiers.map((z, i) => [z, i]));
+  const players = {}, rosters = tiers.map(() => new Set()), killCount = tiers.map(() => 0);
+  for (const k of kills) {
+    killCount[tIdx[k.z]]++;
+    const ps = new Set([...k.cs].map(mainOf));
+    for (const p of ps) {
+      if (excluded.has(p)) continue;
+      const x = players[p] || (players[p] = { key: p, kills: 0, tiers: new Set(), firstT: k.t, lastT: k.t, firstZ: k.z, lastZ: k.z });
+      x.kills++; x.tiers.add(tIdx[k.z]);
+      if (k.t < x.firstT) { x.firstT = k.t; x.firstZ = k.z; }
+      if (k.t > x.lastT) { x.lastT = k.t; x.lastZ = k.z; }
+      rosters[tIdx[k.z]].add(p);
+    }
+  }
+  const ranked = Object.values(players).sort((a, b) => b.tiers.size - a.tiers.size || b.kills - a.kills || a.key.localeCompare(b.key));
+  return { kills, tiers, tIdx, players, ranked, rosters, killCount };
+}
+function altsOf(main) { return Object.keys(links).filter(c => links[c] === main); }
+
+/* ---------- Step 1 ---------- */
+function showLink() {
+  $("v-setup").classList.add("hidden"); $("v-report").classList.add("hidden"); $("v-link").classList.remove("hidden");
+  renderLink(); window.scrollTo(0, 0);
+}
+function renderLink() {
+  const stats = charStats(dedupKills());
+  const keys = Object.keys(data.chars).sort((a, b) => (stats[b]?.kills || 0) - (stats[a]?.kills || 0) || a.localeCompare(b));
+  const q = $("q").value.trim().toLowerCase(), one = $("only-one").checked;
+  $("chars-h").textContent = `Characters seen (${keys.length})`;
+  const rows = keys.filter(k => (!q || k.toLowerCase().includes(q)) && (!one || (stats[k]?.kills || 0) === 1)).map(k => {
+    const st = stats[k] || { kills: 0, zones: new Set() }, m = mainOf(k);
+    const zs = [...st.zones].map(z => data.zones[z]?.name).filter(Boolean);
+    let badges = "";
+    if (st.kills === 1) badges += `<span class="badge b-one">1 kill</span>`;
+    if (links[k]) badges += `<span class="badge b-alt">alt of ${esc(links[k])}</span>`;
+    if (excluded.has(m)) badges += `<span class="badge b-ex">excluded</span>`;
+    return `<label class="char"><input type="checkbox" data-k="${esc(k)}" ${checked.has(k) ? "checked" : ""}>
+      <span class="nm">${esc(k)}${badges}</span>
+      <span class="small muted">${esc(data.chars[k].cls)} · ${st.kills} kill${st.kills === 1 ? "" : "s"} · ${zs.length} tier${zs.length === 1 ? "" : "s"}</span></label>`;
+  });
+  $("chars").innerHTML = rows.join("") || `<p class="muted small">No characters match.</p>`;
+  $("main-list").innerHTML = keys.map(k => `<option value="${esc(k)}">`).join("");
+  const mains = [...new Set(Object.values(links))].sort();
+  $("players-h").textContent = `Linked players (${mains.length})`;
+  $("groups").innerHTML = mains.map(m => `<div class="group stack" style="gap:4px"><p><strong>${esc(m)}</strong>${excluded.has(m) ? '<span class="badge b-ex">excluded</span>' : ""}</p>
+    <p class="small muted">Alts: ${altsOf(m).map(a => `${esc(a)} <button class="link" data-unlink="${esc(a)}" aria-label="Unlink ${esc(a)}">unlink</button>`).join(", ")}</p></div>`).join("")
+    || `<p class="small muted">No alts linked yet.</p>`;
+  $("ex-h").textContent = `Excluded (${excluded.size})`;
+  $("excluded").innerHTML = [...excluded].sort().map(p => `${esc(p)} <button class="link" data-include="${esc(p)}" aria-label="Include ${esc(p)} again">undo</button>`).join(" · ") || "None";
+}
+function persistLinks() { save("links", links); save("excluded", [...excluded]); }
+function linkChecked() {
+  const main = $("main-pick").value.trim();
+  if (!data.chars[main]) { $("paste-msg").textContent = "Pick a main from the character list."; return; }
+  const realMain = mainOf(main);
+  for (const c of checked) {
+    if (c === realMain) continue;
+    for (const a of altsOf(c)) links[a] = realMain;   // re-home c's own alts
+    links[c] = realMain;
+  }
+  delete links[realMain];
+  checked.clear(); $("main-pick").value = ""; $("paste-msg").textContent = ""; persistLinks(); renderLink();
+}
+function applyPaste() {
+  let n = 0, bad = [];
+  for (const line of $("paste").value.split("\n")) {
+    const m = line.split(":"); if (m.length < 2) continue;
+    const main = m[0].trim(), alts = m.slice(1).join(":").split(",").map(s => s.trim()).filter(Boolean);
+    const find = name => Object.keys(data.chars).find(k => k.toLowerCase() === name.toLowerCase()) || Object.keys(data.chars).find(k => k.toLowerCase().startsWith(name.toLowerCase() + "-"));
+    const mk = find(main); if (!mk) { bad.push(main); continue; }
+    for (const a of alts) { const ak = find(a); if (!ak) { bad.push(a); continue; } if (ak !== mk) { links[ak] = mk; n++; } }
+    delete links[mk];
+  }
+  persistLinks(); renderLink();
+  $("paste-msg").textContent = `Linked ${n} alt${n === 1 ? "" : "s"}.` + (bad.length ? ` Not found: ${bad.join(", ")}` : "");
+}
+
+/* ---------- Report ---------- */
+function fmtDate(t) { return new Date(t).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }); }
+function showReport() {
+  $("v-setup").classList.add("hidden"); $("v-link").classList.add("hidden"); $("v-report").classList.remove("hidden");
+  renderReport(); window.scrollTo(0, 0);
+}
+function renderReport() {
+  const M = buildModel(), T = M.tiers.length;
+  const zn = z => data.zones[z]?.name || "Zone " + z;
+  $("title").textContent = `${data.guild.name} — Raid Roster History`;
+  $("subtitle").textContent = `${data.guild.server} · ${settings.region} · ` + (M.kills.length ? `${fmtDate(M.kills[0].t)} to ${fmtDate(M.kills[M.kills.length - 1].t)} · ` : "") + "Roster = anyone on a Mythic kill of the tier's final boss";
+  $("ex-count").textContent = `${excluded.size} player${excluded.size === 1 ? "" : "s"} excluded`;
+  const sk = Object.values(data.reports).filter(s => s === "skipped").length;
+  $("skipped").textContent = sk ? `${sk} log${sk === 1 ? "" : "s"} couldn't be read (archived or private)` : "";
+
+  let turn = [];
+  for (let i = 1; i < T; i++) { const a = M.rosters[i - 1], b = M.rosters[i]; const left = [...a].filter(p => !b.has(p)).length; if (a.size) turn.push(left / a.size); }
+  const avg = turn.length ? Math.round(100 * turn.reduce((x, y) => x + y, 0) / turn.length) + "%" : "—";
+  $("summary").innerHTML = [["Tiers with a Mythic final-boss kill", T], ["Mythic final-boss kills", M.kills.length], ["Unique raiders (alts merged)", M.ranked.length], ["Avg roster turnover / tier", avg]]
+    .map(([l, v]) => `<div class="card"><p class="small muted">${l}</p><p class="stat">${v}</p></div>`).join("");
+
+  const shown = showAll ? M.ranked : M.ranked.slice(0, 25);
+  $("btn-more").textContent = showAll ? "Show top 25" : `Show all ${M.ranked.length}`;
+  $("btn-more").classList.toggle("hidden", M.ranked.length <= 25);
+  $("leader").innerHTML = shown.map((p, i) => {
+    const a = altsOf(p.key).length, fi = M.tIdx[p.firstZ], li = M.tIdx[p.lastZ];
+    const left = T > 1 ? 100 * fi / T : 0, width = T ? 100 * (li - fi + 1) / T : 100;
+    return `<tr><td style="color:${i < 3 ? "var(--gold)" : "var(--muted)"};font-weight:600">${i + 1}</td>
+      <td><strong>${esc(p.key)}</strong>${a ? `<br><span class="small muted">+ ${a} alt${a === 1 ? "" : "s"}</span>` : ""}</td>
+      <td>${esc(zn(p.firstZ))}<br><span class="small muted">${fmtDate(p.firstT)}</span></td>
+      <td>${esc(zn(p.lastZ))}<br><span class="small muted">${fmtDate(p.lastT)}</span></td>
+      <td>${p.tiers.size}</td><td>${p.kills}</td>
+      <td><div class="bar" role="img" aria-label="Raided ${esc(zn(p.firstZ))} to ${esc(zn(p.lastZ))}"><span style="left:${left}%;width:${width}%"></span></div></td></tr>`;
+  }).join("") || `<tr><td colspan="7" class="muted">No kills found.</td></tr>`;
+
+  const cards = [];
+  for (let i = T - 1; i >= 0; i--) {
+    const z = M.tiers[i], r = M.rosters[i], prev = i > 0 ? M.rosters[i - 1] : null, info = data.zones[z] || {};
+    const joined = prev ? [...r].filter(p => !prev.has(p)).sort() : [...r].sort();
+    const left = prev ? [...prev].filter(p => !r.has(p)).sort() : [];
+    const stayed = prev ? r.size - joined.length : 0;
+    cards.push(`<article class="card stack" style="gap:14px">
+      <div><p class="small muted">${esc(info.exp || "")}</p><h3 style="margin-top:4px">${esc(zn(z))}</h3>
+      <p class="small muted" style="margin-top:4px">Mythic ${esc(info.boss || "final boss")} · ${M.killCount[i]} kill${M.killCount[i] === 1 ? "" : "s"}</p></div>
+      <p><strong>${r.size}</strong> on roster${prev ? ` · <strong>${stayed}</strong> stayed` : " · first tier logged"}</p>
+      <div><p class="joined">+ ${prev ? "Joined" : "Roster"} (${joined.length})</p><p class="names" style="margin-top:4px">${joined.map(esc).join(", ") || "—"}</p></div>
+      ${prev ? `<div><p class="left">− Left (${left.length})</p><p class="names" style="margin-top:4px">${left.map(esc).join(", ") || "—"}</p></div>` : ""}
+    </article>`);
+  }
+  $("tiers").innerHTML = cards.join("");
+
+  const tl = $("timeline");
+  tl.style.gridTemplateColumns = `160px repeat(${T}, minmax(28px, 1fr))`;
+  tl.style.minWidth = (160 + T * 32) + "px";
+  let h = `<span></span>` + M.tiers.map(z => `<span class="h" title="${esc(zn(z))}">${esc(zn(z))}</span>`).join("");
+  for (const p of shown) {
+    h += `<span class="pn" title="${esc(p.key)}">${esc(p.key.split("-")[0])}</span>` +
+      M.tiers.map((z, i) => p.tiers.has(i) ? `<span class="on" title="${esc(p.key)} · ${esc(zn(z))}"></span>` : `<span class="off"></span>`).join("");
+  }
+  tl.innerHTML = h;
+}
+
+/* ---------- setup view ---------- */
+function saveSettings() {
+  settings = { name: $("g-name").value.trim(), realm: $("g-realm").value.trim().toLowerCase().replace(/\s+/g, "-"), region: $("g-region").value };
+  save("settings", settings);
+}
+function renderSetup() {
+  $("v-setup").classList.remove("hidden");
+  $("g-name").value = settings.name; $("g-realm").value = settings.realm; $("g-region").value = settings.region;
+  const noCfg = !CONFIG.clientId || CONFIG.clientId.startsWith("PASTE_");
+  $("cfg-warn").textContent = noCfg ? "This page needs a Warcraft Logs client ID. See the README: paste it into CONFIG at the top of the script in index.html." : "";
+  $("btn-signin").classList.toggle("hidden", signedIn());
+  $("btn-signin").disabled = noCfg;
+  $("btn-fetch").classList.toggle("hidden", !signedIn());
+  $("btn-signout").classList.toggle("hidden", !signedIn());
+  $("btn-skip").classList.toggle("hidden", !(data && data.kills && data.kills.length));
+}
+
+/* ---------- events ---------- */
+$("btn-signin").onclick = signIn;
+$("btn-signout").onclick = signOut;
+$("btn-fetch").onclick = fetchAll;
+$("btn-skip").onclick = showLink;
+$("q").oninput = renderLink;
+$("only-one").onchange = renderLink;
+$("chars").addEventListener("change", e => { const k = e.target.dataset.k; if (!k) return; e.target.checked ? checked.add(k) : checked.delete(k); });
+$("btn-link").onclick = linkChecked;
+$("btn-exclude").onclick = () => { for (const c of checked) excluded.add(mainOf(c)); checked.clear(); persistLinks(); renderLink(); };
+$("btn-unlink").onclick = () => { for (const c of checked) delete links[c]; checked.clear(); persistLinks(); renderLink(); };
+$("btn-clear").onclick = () => { checked.clear(); renderLink(); };
+$("groups").addEventListener("click", e => { const a = e.target.dataset.unlink; if (a) { delete links[a]; persistLinks(); renderLink(); } });
+$("excluded").addEventListener("click", e => { const p = e.target.dataset.include; if (p) { excluded.delete(p); persistLinks(); renderLink(); } });
+$("btn-paste").onclick = applyPaste;
+$("btn-build").onclick = showReport;
+$("btn-back").onclick = showLink;
+$("btn-refetch").onclick = () => { $("v-report").classList.add("hidden"); renderSetup(); };
+$("btn-more").onclick = () => { showAll = !showAll; renderReport(); };
+
+(async () => {
+  try { await handleRedirect(); } catch (e) { $("setup-err").textContent = e.message; }
+  renderSetup();
+  if (signedIn() && settings.name && settings.realm && !(data && data.kills.length)) fetchAll();
+})();
+</script>
+</body>
+</html>
